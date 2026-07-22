@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<!-- TEMPLATE landing page. Brand-defining strings, colors, and fonts are
+     tokens injected from brand.config.json by scripts/render-landing.mjs
+     at deploy time (run via scripts/deploy-web.sh). The committed source stays
+     path- and brand-agnostic on purpose. The three feature-card descriptions
+     below are generic template defaults — edit them here for deeper copy. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="referrer" content="strict-origin-when-cross-origin" />
+<!-- Clickjacking guard: GitHub Pages can't send X-Frame-Options, so bust out of
+     any frame. (frame-ancestors isn't enforceable via <meta>.) -->
+<script>try{if(window.top!==window.self){window.top.location=window.self.location;}}catch(e){window.top.location="https://iceberg-deep.github.io/lock-school/";}</script>
+<title>Lock School — Commercial locksmith hardware, by model</title>
+<meta name="description" content="Learn commercial door hardware the way the field uses it: exit devices, mortise and cylindrical locks, storefront hardware, cylinders and cores — parts by model, with real diagrams." />
+<!-- Social share card (Discord, iMessage, Slack, X). All values resolved by
+     render-landing.mjs; og:image (1200x630 banner) is built by
+     scripts/build-og-banner.mjs and copied to the site root by deploy-web.sh. -->
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="LOCK SCHOOL" />
+<meta property="og:title" content="Lock School — Commercial locksmith hardware, by model" />
+<meta property="og:description" content="Learn commercial door hardware the way the field uses it: exit devices, mortise and cylindrical locks, storefront hardware, cylinders and cores — parts by model, with real diagrams." />
+<meta property="og:url" content="https://iceberg-deep.github.io/lock-school/" />
+<meta property="og:image" content="https://iceberg-deep.github.io/lock-school/og-image.png" />
+<meta property="og:image:alt" content="Lock School — Commercial locksmith hardware, by model" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Lock School — Commercial locksmith hardware, by model" />
+<meta name="twitter:description" content="Learn commercial door hardware the way the field uses it: exit devices, mortise and cylindrical locks, storefront hardware, cylinders and cores — parts by model, with real diagrams." />
+<meta name="twitter:image" content="https://iceberg-deep.github.io/lock-school/og-image.png" />
+<!-- CTA hrefs use the /lock-school/app/ placeholder; scripts/deploy-web.sh injects the real
+     app path at deploy time, the same way the Expo baseUrl is handled. -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  /* Identity comes from brand.config.json (theme.colors.dark + theme.fonts),
+     injected at deploy time. Keep visual decisions in config, not here. */
+  :root{
+    --bg:#0B0B0D; --panel:#17181C; --panel2:#111215; --line:#292A2F;
+    --text:#ECEDEF; --dim:#8A8D94; --signal:#E01E2B; --amber:#E01E2B;
+    --teal:#E01E2B; --violet:#E01E2B;
+    --display:'Plus Jakarta Sans',sans-serif; --mono:'JetBrains Mono',monospace; --body:'Plus Jakarta Sans',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--bg); color:var(--text); font-family:var(--body);
+    line-height:1.6; -webkit-font-smoothing:antialiased; overflow-x:hidden;
+    background-image:
+      radial-gradient(120% 70% at 50% -10%, var(--panel) 0%, var(--bg) 55%),
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size:100% 100%, 44px 44px, 44px 44px;
+    background-position:0 0, 0 0, 0 0;
+  }
+  body::before{ /* fade the grid out so it reads as faint texture */
+    content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
+    background:radial-gradient(130% 90% at 50% 20%, transparent 0%, var(--bg) 75%);
+  }
+  .wrap{position:relative; z-index:1; max-width:1080px; margin:0 auto; padding:0 22px}
+  a{color:inherit; text-decoration:none}
+
+  /* fade-up: content visible by default, animated only as enhancement */
+  .rise{animation:rise .7s cubic-bezier(.2,.7,.2,1) both}
+  .d1{animation-delay:.05s}.d2{animation-delay:.13s}.d3{animation-delay:.21s}.d4{animation-delay:.29s}
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.rise{animation:none}}
+
+  /* top bar */
+  header{position:relative; z-index:2}
+  .nav{display:flex; align-items:center; justify-content:space-between; padding:20px 0}
+  .brand{display:flex; align-items:center; gap:10px}
+  .logo{width:34px;height:34px;border-radius:9px;background:var(--signal);
+    display:grid;place-items:center;box-shadow:0 0 22px color-mix(in srgb,var(--signal) 45%,transparent)}
+  .logo svg{width:19px;height:19px}
+  .wordmark{font-family:var(--display);font-weight:800;font-size:21px;letter-spacing:-.3px}
+  .nav-cta{font-family:var(--body);font-weight:700;font-size:14px;color:#fff;
+    background:var(--signal);padding:9px 18px;border-radius:10px;transition:transform .15s,opacity .15s}
+  .nav-cta:hover{transform:translateY(-1px);opacity:.92}
+
+  /* hero */
+  .hero{padding:70px 0 64px; text-align:center}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:2px;color:var(--signal);
+    text-transform:uppercase;margin-bottom:20px}
+  h1{font-family:var(--display);font-weight:800;letter-spacing:-1.5px;line-height:1.0;
+    font-size:clamp(44px,9vw,84px)}
+  h1 .accent{color:var(--signal);font-weight:800}
+  .sub{font-size:clamp(16px,2.4vw,20px);color:var(--text);max-width:620px;margin:24px auto 0;
+    line-height:1.55}
+  .sub b{color:var(--signal);font-weight:600}
+  .ctas{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:36px}
+  .btn{font-family:var(--body);font-weight:600;font-size:16px;padding:15px 30px;border-radius:13px;
+    transition:transform .15s,opacity .15s,border-color .15s;display:inline-flex;align-items:center;gap:9px}
+  .btn-primary{background:var(--signal);color:#fff;box-shadow:0 8px 30px color-mix(in srgb,var(--signal) 32%,transparent)}
+  .btn-primary:hover{transform:translateY(-2px)}
+  .btn-ghost{border:1px solid var(--line);color:var(--text);background:var(--panel2)}
+  .btn-ghost:hover{border-color:var(--signal)}
+  .micro{font-family:var(--mono);font-size:12px;color:var(--dim);margin-top:20px}
+
+  /* section scaffold */
+  section{padding:46px 0}
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:1.8px;color:var(--dim);
+    text-transform:uppercase;margin-bottom:14px;text-align:center}
+  .lead{font-family:var(--display);font-weight:600;font-size:clamp(24px,4vw,34px);letter-spacing:-.5px;
+    text-align:center;max-width:760px;margin:0 auto;line-height:1.25}
+
+  /* value cards */
+  .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:38px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:26px 22px;
+    border-top:3px solid var(--accent,var(--signal));transition:transform .18s,border-color .18s}
+  .card:hover{transform:translateY(-3px)}
+  .card .ico{width:46px;height:46px;border-radius:12px;display:grid;place-items:center;margin-bottom:16px;
+    background:color-mix(in srgb,var(--accent) 14%,transparent);border:1px solid color-mix(in srgb,var(--accent) 40%,transparent)}
+  .card .ico svg{width:23px;height:23px;stroke:var(--accent)}
+  .card h3{font-family:var(--display);font-weight:600;font-size:20px;margin-bottom:8px}
+  .card p{font-size:14.5px;color:var(--dim);line-height:1.6}
+  .c1{--accent:var(--signal)}.c2{--accent:var(--teal)}.c3{--accent:var(--violet)}
+
+  /* honesty block */
+  .honesty{background:var(--panel2);border:1px solid var(--line);border-left:3px solid var(--amber);
+    border-radius:16px;padding:34px 30px;max-width:780px;margin:0 auto}
+  .honesty .tag{font-family:var(--mono);font-size:12px;letter-spacing:1.5px;color:var(--amber);
+    text-transform:uppercase;margin-bottom:14px}
+  .honesty h2{font-family:var(--display);font-weight:600;font-size:clamp(22px,3.6vw,30px);
+    letter-spacing:-.5px;margin-bottom:12px;line-height:1.2}
+  .honesty p{font-size:16px;color:var(--text);line-height:1.6}
+  .honesty p b{color:var(--amber);font-weight:600}
+
+  /* modalities strip */
+  .mods{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:30px}
+  .mod{font-family:var(--mono);font-size:13px;color:var(--text);background:var(--panel);
+    border:1px solid var(--line);border-radius:999px;padding:9px 16px;display:flex;align-items:center;gap:8px}
+  .mod svg{width:15px;height:15px;stroke:var(--signal)}
+
+  /* free tier callout */
+  .free{background:linear-gradient(135deg,color-mix(in srgb,var(--signal) 12%,transparent),var(--panel));
+    border:1px solid color-mix(in srgb,var(--signal) 35%,transparent);border-radius:20px;
+    padding:40px 30px;text-align:center;margin-top:10px}
+  .free h2{font-family:var(--display);font-weight:800;font-size:clamp(26px,4.6vw,40px);letter-spacing:-1px}
+  .free p{color:var(--dim);max-width:520px;margin:14px auto 26px;font-size:16px}
+
+  /* closing */
+  .close{text-align:center;padding:64px 0 30px}
+  .close .line{font-family:var(--display);font-weight:600;font-size:clamp(22px,3.6vw,30px);
+    color:var(--dim);letter-spacing:-.4px;margin-bottom:26px}
+  .close .line b{color:var(--text);font-style:italic;font-weight:600}
+
+  /* footer */
+  footer{border-top:1px solid var(--line);padding:26px 0 40px;margin-top:30px}
+  .foot{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;
+    font-family:var(--mono);font-size:12px;color:var(--dim)}
+  .foot a:hover{color:var(--signal)}
+
+  @media (max-width:760px){
+    .cards{grid-template-columns:1fr}
+    .hero{padding:48px 0 40px}
+    section{padding:34px 0}
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <nav class="nav rise">
+        <div class="brand">
+          <div class="logo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#0B0B0D" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 8v8M15 8v8M9 12h6"/></svg>
+          </div>
+          <span class="wordmark">LOCK SCHOOL</span>
+        </div>
+        <a class="nav-cta" href="/lock-school/app/">Start free</a>
+      </nav>
+    </header>
+
+    <!-- HERO -->
+    <div class="hero">
+      <div class="kicker rise d1">Field-first · Real hardware · No fluff</div>
+      <h1 class="rise d2">Know the hardware.<br/><span class="accent">By model.</span></h1>
+      <p class="sub rise d3">The parts, functions, and terminology a commercial locksmith uses every day… taught from real manufacturer diagrams, five ways until it sticks.</p>
+      <div class="ctas rise d4">
+        <a class="btn btn-primary" href="/lock-school/app/">Start learning free
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </a>
+        <a class="btn btn-ghost" href="#how">See how it works</a>
+      </div>
+      <div class="micro rise d4">Ten minutes a day · No sign-up to start · Built for the truck</div>
+    </div>
+
+    <!-- POSITIONING LEAD -->
+    <section id="how">
+      <p class="eyebrow">Why Lock School</p>
+      <p class="lead">A focused course that turns manufacturer catalogs into muscle memory — recognize the device, name the parts, know the model.</p>
+
+      <!-- VALUE CARDS — generic template defaults; edit for your subject. -->
+      <div class="cards">
+        <div class="card c1">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/></svg></div>
+          <h3>Five ways to learn every idea</h3>
+          <p>Read it, see it, hear it, recall it, do it. Each concept hits you from five angles so it actually sticks — not just another wall of text.</p>
+        </div>
+        <div class="card c2">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5M10 19V9M16 19v-6M22 19H2"/></svg></div>
+          <h3>A deliberate sequence</h3>
+          <p>Concepts build in order, from first principles to the frontier — so you genuinely understand, not a pile of tips to copy and forget.</p>
+        </div>
+        <div class="card c3">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v6h6M21 12a9 9 0 1 1-3-6.7L21 8"/></svg></div>
+          <h3>Remembers what you forget</h3>
+          <p>Spaced repetition resurfaces the concepts you're about to lose, so what you learn stays learned — not crammed and gone.</p>
+        </div>
+      </div>
+
+      <!-- MODALITY STRIP -->
+      <div class="mods">
+        <span class="mod"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2zM22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>Read</span>
+        <span class="mod"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/></svg>See</span>
+        <span class="mod"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>Hear</span>
+        <span class="mod"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v6h6M21 12a9 9 0 1 1-3-6.7L21 8"/></svg>Recall</span>
+        <span class="mod"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9z"/></svg>Do</span>
+      </div>
+    </section>
+
+    <!-- HONESTY -->
+    <section>
+      <div class="honesty rise">
+        <div class="tag">Field-accurate</div>
+        <h2>Not a credential. The vocabulary and recognition you actually use on a call.</h2>
+        <p>What this gives you is real: name the device on sight, know its parts and functions, and speak the trade's language with supply houses and manufacturers. That is the whole point.</p>
+      </div>
+    </section>
+
+    <!-- FREE TIER -->
+    <section>
+      <div class="free rise">
+        <h2>Start free. Go deep when you want.</h2>
+        <p>The entire first module — every lesson and every way of learning — costs nothing, and you can jump in with no account. Sign in to save your progress, and upgrade only when you're ready for more.</p>
+        <a class="btn btn-primary" href="/lock-school/app/">Open Lock School
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </a>
+      </div>
+    </section>
+
+    <!-- CLOSING -->
+    <div class="close">
+      <p class="line">Ten minutes a day. No prerequisites.<br/><b>Just the hardware.</b></p>
+      <a class="btn btn-primary" href="/lock-school/app/">Start learning free
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </a>
+    </div>
+
+    <footer>
+      <div class="foot">
+        <span>© Lock School · the locksmith's trade course & license prep</span>
+        <a href="/lock-school/app/#privacy">Privacy &amp; data</a>
+      </div>
+    </footer>
+  </div>
+</body>
+</html>
