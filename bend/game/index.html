@@ -1,0 +1,822 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Conduit — bend it to fit</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.5 Helvetica, Arial, sans-serif;
+         background: #14161a; color: #e7e9ec; display: flex; height: 100vh;
+         overflow: hidden; }
+  #view { flex: 1; min-width: 0; }
+  #panel { width: 340px; padding: 18px; overflow-y: auto;
+           border-left: 1px solid #2b2f36; background: #191c21; }
+  h1 { font-size: 19px; margin: 0 0 2px; }
+  h2 { font-size: 15px; margin: 22px 0 6px; text-transform: uppercase;
+       letter-spacing: .06em; color: #8b93a1; }
+  p.brief { color: #b9c0cb; margin: 6px 0 0; }
+  p.teaches { color: #8b93a1; font-size: 13px; }
+  select, button { font: inherit; background: #22262d; color: #e7e9ec;
+                   border: 1px solid #343a44; border-radius: 6px;
+                   padding: 6px 9px; }
+  button { cursor: pointer; }
+  button.primary { background: #1b6b2f; border-color: #1b6b2f; width: 100%;
+                   padding: 10px; font-weight: 700; margin-top: 12px; }
+  button.small { padding: 2px 7px; }
+  select { width: 100%; }
+  table { width: 100%; border-collapse: collapse; }
+  td { padding: 3px 2px; }
+  td.n { text-align: right; color: #8b93a1; font-variant-numeric: tabular-nums; }
+  input[type=range] { width: 100%; }
+  input[type=number], .row input[type=text] { width: 78px; font: inherit; background: #22262d;
+                       color: #e7e9ec; border: 1px solid #343a44;
+                       border-radius: 5px; padding: 3px 5px; }
+  .row { display: flex; gap: 6px; align-items: center; margin-bottom: 5px; }
+  .row select { width: auto; flex: 1; }
+  .cut { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .over { color: #e0a458; }
+  #result { margin-top: 12px; padding: 11px; border-radius: 7px;
+            background: #22262d; border-left: 4px solid #343a44; }
+  #result.pass { border-left-color: #1b6b2f; }
+  #result.fail { border-left-color: #b3261e; }
+  #result b { display: block; margin-bottom: 4px; }
+  #result ul { margin: 6px 0 0; padding-left: 18px; color: #d7b0ab; }
+  .note { color: #6f7887; font-size: 12px; margin-top: 20px; }
+  .offline { color: #8b93a1; font-size: 13px; padding: 18px; margin: 0; }
+  /* The bender strip. Labels live under the drawing, never inside it — at
+     phone width there is no room beside the head, and shrinking type until it
+     fits is how a diagram stops being read. */
+  #bendbar { position: sticky; top: -18px; z-index: 3; background: #191c21;
+             padding-bottom: 8px; }
+  #bendbar h2 { margin-top: 0; padding-top: 18px; }
+  .anim { margin: 0 0 10px; padding: 8px; border-radius: 7px;
+          background: #1e2229; border: 1px solid #262b33; cursor: pointer; }
+  .anim.live { border-color: #345; }
+  /* 150, not 96: the casting needs the room. At 96 the pedal and rim widen
+     the box, auto-fit shrinks the pipe with it, and the windows and scale
+     ticks blur into texture — busier without saying more. */
+  .anim svg { display: block; width: 100%; height: 150px; }
+  .legend { margin-top: 6px; font-size: 12px; color: #8b93a1;
+            display: flex; flex-wrap: wrap; gap: 2px 10px; }
+  .legend b { color: #e7e9ec; font-weight: 700; }
+  .tap { color: #6f7887; font-size: 11px; }
+  .trans { display: flex; align-items: center; gap: 9px; margin: 0 0 10px;
+           padding: 7px 9px; border-radius: 7px; font-size: 12px; }
+  .trans svg { width: 34px; height: 34px; flex: none; }
+  .trans.roll { background: #2a2118; border: 1px solid #5a4526; color: #e0a458; }
+  .trans.same { background: #1a231c; border: 1px solid #244d2e; color: #6cc186; }
+  .trans b { display: block; font-size: 13px; letter-spacing: .04em; }
+  /* Side by side, the panel's fixed 340px eats the view: at 600px wide the
+     graphic is a 260px slice, on a phone it is 50px and reads as missing.
+     Stack instead, so the view keeps a usable height on the tools you
+     actually stand on a job with. */
+  @media (max-width: 760px) {
+    body { flex-direction: column; }
+    #view { flex: none; height: 45vh; }
+    #panel { width: auto; border-left: none; border-top: 1px solid #2b2f36; }
+  }
+</style>
+
+<div id="view"></div>
+<div id="panel">
+  <h1>Bend it to fit</h1>
+  <p class="brief" id="brief"></p>
+
+  <h2>Level</h2>
+  <select id="level"></select>
+  <p class="teaches" id="teaches"></p>
+
+  <div id="obs" style="display:none">
+    <h2>The obstruction</h2>
+    <div class="row">
+      <select id="obsshape">
+        <option value="box">a box — pad, duct, curb</option>
+        <option value="pipe">a pipe — round, crossing your path</option>
+      </select>
+    </div>
+    <div class="row"><span id="obshn"></span></div>
+    <input type="range" id="obsh" min="0.5" max="10" step="0.25">
+    <div class="row"><span id="obswn"></span></div>
+    <input type="range" id="obsw" min="1" max="40" step="0.5">
+  </div>
+
+  <h2>Pipe</h2>
+  <select id="size"></select>
+
+  <!-- Sticky, and above the list. Below the list every row pushes it further
+       down; above the list it still scrolls away, because on a phone the 3D
+       view and the brief already fill the screen before the panel starts.
+       Measured on a Pixel 5: the button sat at y=737 in a 727px viewport with
+       no bends at all. You tap nothing and decide the button is broken. -->
+  <div id="bendbar">
+    <h2>Bends</h2>
+    <button class="small" id="add">add a bend</button>
+  </div>
+  <div class="note" id="markerr"></div>
+  <div id="bends"></div>
+
+  <h2>Cut the stick</h2>
+  <div class="cut"><span id="cutlabel"></span></div>
+  <input type="range" id="cut" step="0.01">
+  <table>
+    <tr><td>straight line</td><td class="n" id="straight"></td></tr>
+    <tr><td>you cut</td><td class="n" id="cutn"></td></tr>
+    <tr><td class="over">over by</td><td class="n over" id="over"></td></tr>
+  </table>
+  <p class="note" id="turned" style="display:none">This run turns a corner, so
+    there is no shrink figure to give: the straight line between the two ends
+    is a diagonal, not the run.</p>
+
+  <div id="joints" style="display:none">
+    <h2>Joints</h2>
+    <div id="jointlist"></div>
+    <button class="small" id="addjoint">joint it for me</button>
+    <div class="note" id="jointwins"></div>
+  </div>
+
+  <button class="primary" id="test">Test the fit</button>
+  <div id="result"></div>
+  <button class="small" id="show" style="margin-top:10px">show me one that works</button>
+
+  <p class="note">Layout help, not a compliance determination. Near sprinkler
+    pipe the constraints are clearance, independent support and spray-pattern
+    obstruction — and the AHJ decides.</p>
+</div>
+
+<!-- three.js r128, vendored. It used to come off unpkg, which meant the 3D
+     view needed a network on a tool whose whole point is working without one
+     — and a blocked CDN took the entire page with it until the guard below
+     went in. MIT, licence alongside the files. -->
+<script src="vendor/three-0.128.0/three.min.js"></script>
+<script src="vendor/three-0.128.0/OrbitControls.js"></script>
+<script type="module">
+// The engine is a separate module on purpose: the browser and the headless
+// verifier load the identical file, so a level proved solvable is proved
+// against the code that actually runs here. No build step either way.
+import {
+  LEVELS, fit, shrinkOf, SCALE, PIPE_OD, BEND_RADIUS, SIZE, PLAYABLE_SIZES,
+  levelAtSize, radiusOf, odOf, solveFit, frac, inches, INCHES_HELP,
+  benderPrimitives, rollView, boundsOf, deltas, facingOf,
+  couplingWindows, suggestCouplings, CONDUIT,
+} from './engine.js';
+
+const el = (id) => document.getElementById(id);
+let level = LEVELS[0];
+let bends = [];
+let cut = 0;
+let size = SIZE;
+// A stick is ten feet. Anything longer is two pieces and a coupling, and
+// where that joint lands is not free — it cannot sit on a bend.
+let couplings = [];
+
+// Size changes the bend radius, and a bigger pipe rests higher, so everything
+// drawn or tested goes through this. The level itself keeps the numbers it
+// was written with — the shift lives in one place, in the engine.
+const current = () => levelAtSize(level, size);
+
+// ---------------------------------------------------------------- the scene
+// three.js comes off a CDN, and the one place this gets used is a phone with
+// one bar. Losing the 3D view is survivable; losing the whole panel with it is
+// not, and that is what happened — the module died at `new THREE.Scene()` and
+// every button on the page went with it. So the scene is optional. The bender
+// strip is plain SVG and never needed WebGL in the first place.
+const view = el('view');
+const has3D = typeof THREE !== 'undefined';
+let scene = null;
+let camera = null;
+let renderer = null;
+let controls = null;
+let world = null;
+
+if (has3D) {
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x14161a);
+  camera = new THREE.PerspectiveCamera(45, 1, 0.5, 4000);
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  view.appendChild(renderer.domElement);
+  controls = new THREE.OrbitControls(camera, renderer.domElement);
+  scene.add(new THREE.HemisphereLight(0xdfe6f2, 0x20242b, 1.1));
+  const key = new THREE.DirectionalLight(0xffffff, 0.7);
+  key.position.set(40, 80, 60);
+  scene.add(key);
+  world = new THREE.Group();
+  scene.add(world);
+} else {
+  view.innerHTML = '<p class="offline">No 3D view — three.js did not load. '
+    + 'Everything else works: the bends, the heads, the marks and the fit '
+    + 'test are all on this page and none of them need it.</p>';
+}
+
+function resize() {
+  if (!has3D) return;
+  const w = view.clientWidth;
+  const h = view.clientHeight;
+  renderer.setSize(w, h);
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+addEventListener('resize', resize);
+
+function clear(group) {
+  while (group.children.length) {
+    const c = group.children.pop();
+    if (c.geometry) c.geometry.dispose();
+    if (c.material) c.material.dispose();
+  }
+}
+
+function box(x0, x1, y0, y1, depth, color, opacity = 1) {
+  const g = new THREE.BoxGeometry(x1 - x0, y1 - y0, depth);
+  const m = new THREE.MeshLambertMaterial({
+    color, transparent: opacity < 1, opacity,
+  });
+  const mesh = new THREE.Mesh(g, m);
+  mesh.position.set((x0 + x1) / 2, (y0 + y1) / 2, 0);
+  return mesh;
+}
+
+// A round obstruction lies across the path, so it runs in z like the boxes do.
+// Width is its diameter and the top edge is the top of the pipe — the same two
+// numbers the box reads, which is what lets the sliders drive either shape.
+function round(o, depth, color, opacity = 1) {
+  const r = (o.x1 - o.x0) / 2;
+  const g = new THREE.CylinderGeometry(r, r, depth, 24);
+  const m = new THREE.MeshLambertMaterial({
+    color, transparent: opacity < 1, opacity,
+  });
+  const mesh = new THREE.Mesh(g, m);
+  mesh.rotation.x = Math.PI / 2;
+  mesh.position.set((o.x0 + o.x1) / 2, o.y1 - r, 0);
+  return mesh;
+}
+
+function drawWorld() {
+  if (!has3D) return;
+  clear(world);
+  const level = current();
+  const span = Math.max(level.target.at[0], 80) + 20;
+  const deck = new THREE.Mesh(
+    new THREE.PlaneGeometry(span, 60),
+    new THREE.MeshLambertMaterial({ color: 0x2a2f37 }),
+  );
+  deck.rotation.x = -Math.PI / 2;
+  deck.position.set(span / 2 - 10, level.deck, 0);
+  world.add(deck);
+
+  for (const o of level.obstructions) {
+    world.add(o.shape === 'pipe'
+      ? round(o, 26, 0x8a5a2b, 0.85)
+      : box(o.x0, o.x1, o.y0, o.y1, 26, 0x8a5a2b, 0.85));
+  }
+  const t = level.target.at;
+  const target = box(t[0] - 2, t[0] + 2, t[1] - 2, t[1] + 2, 4, 0x1b6b2f, 0.6);
+  world.add(target);
+}
+
+// Framing is separate from drawing: the obstruction sliders redraw the world
+// on every tick, and resetting the camera each time would yank the view out
+// from under whatever you had orbited to.
+function frameCamera() {
+  if (!has3D) return;
+  const span = Math.max(level.target.at[0], 80) + 20;
+  camera.position.set(span * 0.45, 34, span * 0.75);
+  controls.target.set(span * 0.4, 8, 0);
+  controls.update();
+}
+
+let pipe = null;
+function drawPipe(result) {
+  if (!has3D) return;
+  if (pipe) {
+    world.remove(pipe);
+    pipe.geometry.dispose();
+    pipe.material.dispose();
+  }
+  const pts = result.centerline.points.map((p) => new THREE.Vector3(p[0], p[1], 0));
+  if (pts.length < 2) { pipe = null; return; }
+  const curve = new THREE.CatmullRomCurve3(pts);
+  const geo = new THREE.TubeGeometry(curve, pts.length * 2, PIPE_OD / 2, 12, false);
+  // On the custom level the box is the thing you are moving, so the pipe
+  // answers that one question as you drag: does it clear? Landing in the
+  // target box stays the fit test's job. "Clears" is the engine's own rule —
+  // the box's required margin, not merely failing to touch it.
+  const clears = result.centerline.ok
+    && !result.failures.some((f) => f.test.startsWith('clears the '));
+  const mat = new THREE.MeshLambertMaterial({
+    color: (isCustom() ? clears : result.pass) ? 0x35c46a : 0xd0433a,
+  });
+  pipe = new THREE.Mesh(geo, mat);
+  world.add(pipe);
+}
+
+// -------------------------------------------------------------- the bender
+
+// Drawn from the ported primitives every frame — no picture files anywhere,
+// so there is no second copy of this bender to go stale. The sweep is the
+// same head at t x target, which is the motion: pipe on the deck, hook over
+// the free end, pull the handle and the free end comes up with it.
+
+// Same palette as the schematic head, thinner lines for the casting so the
+// detail sits behind the things the panel exists to say. Not a new drawing —
+// the same tool drawn closer.
+const PAINT = {
+  pipe: ['#e7e9ec', 2.4], shoe: ['#8b93a1', 3.2], hook: ['#e0a458', 2.2],
+  handle: ['#6f7887', 3], pull: ['#6cc186', 2], hub: ['#8b93a1', 0],
+  arrow: ['#b3261e', 0], star: ['#a978d8', 0], notch: ['#4b9fd8', 0],
+  window: ['#5b636f', 1.2], scale_tick: ['#8b93a1', 1.4],
+  socket: ['#6f7887', 1.6], heel: ['#6f7887', 2], pedal: ['#6f7887', 2],
+};
+// Flip to 'schematic' if the casting ever costs more than it explains.
+const DETAIL = 'detailed';
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+// The handle's direction is the information; its full 28" only blows up the
+// bounding box and squashes the head, which is why every view draws a stub.
+// The CLI's numbers, not new ones — this panel is the same size problem.
+const VIEW = { handleLen: 9.0, backRun: 11.0, freeRun: 9.0, detail: DETAIL };
+
+function svgBody(prims, viewBox) {
+  const [, , , h] = viewBox;
+  const dot = Math.max(h * 0.035, 0.25);
+  const runs = {};
+  let out = '';
+  for (const p of prims) {
+    if (p.tag === 'pt') {
+      const [c, ] = PAINT[p.kind] || PAINT.hub;
+      out += `<circle cx="${p.a[0].toFixed(3)}" cy="${(-p.a[1]).toFixed(3)}" `
+        + `r="${dot.toFixed(3)}" fill="${c}"/>`;
+      continue;
+    }
+    (runs[p.kind] = runs[p.kind] || []).push(
+      `M${p.a[0].toFixed(3)} ${(-p.a[1]).toFixed(3)}`
+      + `L${p.b[0].toFixed(3)} ${(-p.b[1]).toFixed(3)}`);
+  }
+  let paths = '';
+  for (const kind of Object.keys(runs)) {
+    const [c, w] = PAINT[kind] || PAINT.pipe;
+    paths += `<path d="${runs[kind].join('')}" fill="none" stroke="${c}" `
+      + `stroke-width="${w}" stroke-linecap="round" `
+      + 'vector-effect="non-scaling-stroke"/>';
+  }
+  return paths + out;
+}
+
+// The pull: where the handle tip is now against where it is a few degrees on.
+// Derived, so it can never point the wrong way on a mirrored head.
+function pullArrow(angle, facing) {
+  const tip = (a) => benderPrimitives(Math.min(90, a), { facing, ...VIEW })
+    .filter((p) => p.kind === 'handle')[0].b;
+  const from = tip(angle);
+  const to = tip(Math.min(90, angle + 12));
+  if (Math.hypot(to[0] - from[0], to[1] - from[1]) < 0.4) return [];
+  const ang = Math.atan2(to[1] - from[1], to[0] - from[0]);
+  const head = (turn) => [
+    to[0] - 2.2 * Math.cos(ang + turn), to[1] - 2.2 * Math.sin(ang + turn),
+  ];
+  return [
+    { tag: 'seg', a: from, b: to, kind: 'pull' },
+    { tag: 'seg', a: to, b: head(0.5), kind: 'pull' },
+    { tag: 'seg', a: to, b: head(-0.5), kind: 'pull' },
+  ];
+}
+
+// One viewBox across the whole sweep. Fit each frame separately and the head
+// drifts about its box as it turns — the same lesson animate.py learned.
+function sweepBox(angle, facing) {
+  let all = [];
+  for (const t of [0, 0.25, 0.5, 0.75, 1]) {
+    all = all.concat(benderPrimitives(angle * t, { facing, ...VIEW }),
+                     pullArrow(angle * t, facing));
+  }
+  const [x0, y0, x1, y1] = boundsOf(all);
+  const pad = 1.4;
+  return [x0 - pad, -(y1 + pad), (x1 - x0) + pad * 2, (y1 - y0) + pad * 2];
+}
+
+function frameAt(angle, facing) {
+  return benderPrimitives(angle, { facing, glyph: 'arrow', ...VIEW })
+    .concat(pullArrow(angle, facing));
+}
+
+// Which side things sit on is read off the drawing, not asserted. Mirror the
+// head and these follow it.
+function sides(angle, facing) {
+  const prims = benderPrimitives(angle, { facing, ...VIEW });
+  const hook = prims.filter((p) => p.kind === 'hook' && p.tag === 'pt')[0].a;
+  const handle = prims.filter((p) => p.kind === 'handle')[0].b;
+  return {
+    hook: hook[0] >= 0 ? 'right' : 'left',
+    handle: handle[0] >= 0 ? 'right' : 'left',
+  };
+}
+
+let liveRow = -1;
+let liveRaf = null;
+
+function stopSweep() {
+  if (liveRaf !== null) cancelAnimationFrame(liveRaf);
+  liveRaf = null;
+}
+
+// 1.2s sweep, a pause on the finished bend, then back to nothing. The pause is
+// a longer hold on the last frame, never a repeated one.
+function sweep(host, angle, facing) {
+  const box = sweepBox(angle, facing).map((v) => v.toFixed(3)).join(' ');
+  const svg = host.querySelector('svg');
+  svg.setAttribute('viewBox', box);
+  const geom = sweepBox(angle, facing);
+  const paint = (a) => { svg.innerHTML = svgBody(frameAt(a, facing), geom); };
+  if (REDUCED || !angle) { paint(angle); return; }
+  const SWEEP = 1200;
+  const HOLD = 700;
+  let t0 = null;
+  const step = (now) => {
+    if (t0 === null) t0 = now;
+    const gone = (now - t0) % (SWEEP + HOLD);
+    paint(gone < SWEEP ? (angle * gone) / SWEEP : angle);
+    liveRaf = requestAnimationFrame(step);
+  };
+  liveRaf = requestAnimationFrame(step);
+}
+
+function animPanel(b, i) {
+  const angle = Math.abs(b.angle);
+  const facing = facingOf(b.angle);
+  const host = document.createElement('div');
+  host.className = 'anim';
+  const live = i === liveRow && !REDUCED && angle > 0;
+  if (live) host.classList.add('live');
+  host.innerHTML = `<svg viewBox="${sweepBox(angle, facing).map((v) => v.toFixed(3)).join(' ')}"`
+    + ` role="img" aria-label="The bender set up for ${frac(b.at)} at ${angle}°,`
+    + ` head facing ${facing}">${svgBody(frameAt(angle, facing), sweepBox(angle, facing))}</svg>`;
+  const s = sides(angle, facing);
+  const legend = document.createElement('div');
+  legend.className = 'legend';
+  legend.innerHTML = `<span><b>ARROW</b> on your ${frac(b.at)} mark</span>`
+    + `<span><b>HOOK</b> ${s.hook}</span>`
+    + `<span><b>HANDLE</b> rises ${s.handle}</span>`
+    + `<span>${live ? 'pulling' : 'tap to pull it'}</span>`;
+  host.appendChild(legend);
+  host.onclick = () => { liveRow = liveRow === i ? -1 : i; render(); };
+  return host;
+}
+
+// A joint row: where the two cut ends butt, in inches along the run.
+function jointRow(at, i) {
+  const row = document.createElement('div');
+  row.className = 'row';
+  const box = document.createElement('input');
+  box.type = 'text';
+  box.value = frac(at);
+  box.title = 'inches along the run';
+  box.onchange = () => {
+    const v = inches(box.value);
+    if (v === null || v < 0) {
+      el('markerr').textContent = `${box.value} is not a measurement. ${INCHES_HELP}`;
+      box.value = frac(at);
+      return;
+    }
+    el('markerr').textContent = '';
+    couplings[i] = v;
+    render();
+  };
+  const tag = document.createElement('span');
+  tag.className = 'tap';
+  tag.textContent = `coupling ${CONDUIT.coupling.length}"`;
+  const del = document.createElement('button');
+  del.className = 'small';
+  del.textContent = '×';
+  del.onclick = () => { couplings.splice(i, 1); render(); };
+  row.append(box, tag, del);
+  return row;
+}
+
+// Between rows. This is the whole point of the strip: 10" up, 20" down, 30"
+// down means roll between the first two and leave it alone between the last
+// two, and nothing on the panel said so before.
+function transition(delta, rolled) {
+  const div = document.createElement('div');
+  const roll = delta === 'reversed';
+  div.className = `trans ${roll ? 'roll' : 'same'}`;
+  const view = rollView(rolled);
+  const [x0, y0, x1, y1] = boundsOf(view);
+  const box = [x0 - 0.4, -(y1 + 0.4), (x1 - x0) + 0.8, (y1 - y0) + 0.8];
+  div.innerHTML = roll
+    ? `<svg viewBox="${box.join(' ')}" role="img" aria-label="The stick end-on, `
+      + `rolled">${svgBody(view, box)}</svg>`
+      + '<span><b>ROLL THE PIPE 180°</b>The next bend goes the other way. '
+      + 'Leave the bender where it is.</span>'
+    : '<span><b>SAME SETUP — do not roll</b></span>';
+  return div;
+}
+
+// Where along the walked run a given inch mark lands, and which way the pipe
+// is heading there. Distance along the centreline is distance along the stick
+// — the arcs are walked at true radius, so the two are the same number.
+function alongRun(pts, d) {
+  let gone = 0;
+  for (let i = 0; i < pts.length - 1; i += 1) {
+    const dx = pts[i + 1][0] - pts[i][0];
+    const dy = pts[i + 1][1] - pts[i][1];
+    const step = Math.hypot(dx, dy);
+    if (gone + step >= d) {
+      const f = step === 0 ? 0 : (d - gone) / step;
+      return { at: [pts[i][0] + dx * f, pts[i][1] + dy * f], dir: [dx / step, dy / step] };
+    }
+    gone += step;
+  }
+  return null;
+}
+
+let joints = [];
+function drawJoints(result) {
+  if (!has3D) return;
+  for (const m of joints) {
+    world.remove(m);
+    m.geometry.dispose();
+    m.material.dispose();
+  }
+  joints = [];
+  if (!result.centerline.ok) return;
+  for (const at of couplings) {
+    const spot = alongRun(result.centerline.points, at);
+    if (!spot) continue;
+    const g = new THREE.CylinderGeometry(odOf(size) * 0.8, odOf(size) * 0.8,
+                                         CONDUIT.coupling.length, 14);
+    const mesh = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ color: 0xb9c0cb }));
+    mesh.position.set(spot.at[0], spot.at[1], 0);
+    mesh.rotation.z = Math.atan2(spot.dir[1], spot.dir[0]) - Math.PI / 2;
+    world.add(mesh);
+    joints.push(mesh);
+  }
+}
+
+// ------------------------------------------------------------------- the ui
+// The custom level lives here and not in engine.js on purpose. A level in
+// LEVELS carries a solution that verify.mjs proves before the build passes,
+// and an obstruction you can drag to any size cannot carry that proof. So the
+// proven set stays exactly what it was, and this one states no answer: the fit
+// test still runs live, which is the only claim it makes.
+const CUSTOM = {
+  id: 'custom',
+  title: 'Custom — your own obstruction',
+  brief: 'Set the obstruction where you actually found it, then get over it '
+    + 'and back down to the deck.',
+  teaches: 'No worked answer on this one. Nobody proved it fits — that is what '
+    + 'the fit test is for.',
+  deck: 0,
+  start: [0, PIPE_OD / 2],
+  obstructions: [
+    { label: 'obstruction', x0: 24, x1: 30, y0: 0, y1: 3, clearance: 0.5 },
+  ],
+  // Past a stick on purpose: twelve feet of run is where a coupling stops
+  // being trivia and becomes a thing you have to place.
+  target: { at: [140, PIPE_OD / 2], heading: 0, tolerance: 0.5, angleTolerance: 1 },
+  stick: { min: 40, max: 480 },
+};
+
+const isCustom = () => level.id === 'custom';
+
+function loadLevel(id) {
+  const found = id === 'custom' ? CUSTOM : LEVELS.find((l) => l.id === id);
+  // A fresh copy every load: the sliders write straight into the box, and
+  // level objects are shared, so editing one in place would follow you back.
+  level = JSON.parse(JSON.stringify(found || LEVELS[0]));
+  if (!isCustom()) level.solution = (found || LEVELS[0]).solution;
+  el('obs').style.display = isCustom() ? '' : 'none';
+  el('show').style.display = isCustom() ? 'none' : '';
+  el('markerr').textContent = '';
+  if (isCustom()) syncObstruction();
+  bends = [];
+  cut = Math.round((level.stick.min + level.stick.max) / 2);
+  el('brief').textContent = level.brief;
+  el('teaches').textContent = level.teaches;
+  el('cut').min = level.stick.min;
+  el('cut').max = level.stick.max;
+  el('cut').value = cut;
+  el('result').className = '';
+  el('result').innerHTML = '<b>Nothing tested yet.</b>Lay in your bends, cut '
+    + 'the stick, then test the fit.';
+  drawWorld();
+  frameCamera();
+  render();
+}
+
+function bendRow(b, i) {
+  const row = document.createElement('div');
+  row.className = 'row';
+  const mark = document.createElement('input');
+  mark.type = 'text';
+  mark.value = frac(b.at);
+  mark.title = 'inches along the stick';
+  // onchange, not oninput: render() rebuilds these rows, so reacting to every
+  // keystroke would pull the box out from under you halfway through typing.
+  mark.onchange = () => {
+    const at = inches(mark.value);
+    if (at === null || at < 0) {
+      el('markerr').textContent = `${mark.value} is not a measurement. ${INCHES_HELP}`;
+      mark.value = frac(b.at);
+      return;
+    }
+    el('markerr').textContent = '';
+    b.at = at;
+    render();
+  };
+
+  const ang = document.createElement('select');
+  for (const a of SCALE) {
+    for (const sign of [1, -1]) {
+      const o = document.createElement('option');
+      o.value = String(a * sign);
+      o.textContent = `${sign > 0 ? 'up' : 'down'} ${a}°`;
+      ang.appendChild(o);
+    }
+  }
+  ang.value = String(b.angle);
+  ang.onchange = () => { b.angle = parseFloat(ang.value); render(); };
+
+  const del = document.createElement('button');
+  del.className = 'small';
+  del.textContent = '×';
+  del.onclick = () => { bends.splice(i, 1); render(); };
+
+  row.append(mark, ang, del);
+  return row;
+}
+
+function render() {
+  const list = el('bends');
+  stopSweep();
+  list.innerHTML = '';
+  // Row, then the head set up for that row, then what changes before the next
+  // one. The roll flags come from the engine's deltas — the CLI's own logic,
+  // ported once and checked against it, not a second reading of the signs.
+  const flags = deltas(bends);
+  const panels = [];
+  let rolled = false;
+  bends.forEach((b, i) => {
+    list.appendChild(bendRow(b, i));
+    const panel = animPanel(b, i);
+    panels.push(panel);
+    list.appendChild(panel);
+    if (i < bends.length - 1) {
+      if (flags[i + 1] === 'reversed') rolled = !rolled;
+      list.appendChild(transition(flags[i + 1], rolled));
+    }
+  });
+  if (liveRow >= 0 && liveRow < bends.length) {
+    const b = bends[liveRow];
+    sweep(panels[liveRow], Math.abs(b.angle), facingOf(b.angle));
+  }
+
+  cut = parseFloat(el('cut').value);
+  const result = fit(current(), { bends, cut, size, couplings });
+  const s = shrinkOf(result.centerline, cut);
+  // Full precision above, the tape below. Nothing here feeds back into the
+  // geometry — these four are what you read, not what is measured.
+  el('cutlabel').textContent = frac(cut);
+  el('cutn').textContent = frac(s.cut);
+  // Shrink only means something while the run still points the way it began.
+  // Round a corner and the straight line between the ends is the hypotenuse
+  // of an L — better to say so than to print a number nobody can use.
+  el('straight').textContent = s.parallel ? frac(s.straight) : '—';
+  el('over').textContent = s.parallel ? frac(s.over) : '—';
+  el('turned').style.display = s.parallel ? 'none' : '';
+  // Joints. The section only appears when the run is longer than a stick or
+  // you have already put one in — no point showing it on a 4-foot run.
+  const needsJoint = cut > CONDUIT.stick + 1e-9 || couplings.length > 0;
+  el('joints').style.display = needsJoint ? '' : 'none';
+  if (needsJoint) {
+    const list = el('jointlist');
+    list.innerHTML = '';
+    couplings.forEach((at, i) => list.appendChild(jointRow(at, i)));
+    const windows = couplingWindows(bends, cut, size);
+    el('jointwins').textContent = windows.length
+      ? `Straight pipe, so a joint can go: ${windows
+          .map(([lo, hi]) => `${frac(lo)}–${frac(hi)}`).join(', ')}`
+      : 'Nowhere on this run is straight enough for a coupling.';
+  }
+  drawPipe(result);
+  drawJoints(result);
+  return result;
+}
+
+function report(result) {
+  const box = el('result');
+  if (result.pass) {
+    box.className = 'pass';
+    const short = level.target.connector === false ? ''
+      : ` The cut stops ${frac(CONDUIT.connectorInset)} short of the box on purpose — `
+        + 'the connector spans that, so it is not a miss.';
+    box.innerHTML = '<b>It fits.</b>Lands in the box, arrives square, clears '
+      + `everything, and never goes under the deck.${short}`;
+    return;
+  }
+  box.className = 'fail';
+  box.innerHTML = '<b>Not yet.</b><ul>'
+    + result.failures.map((f) => `<li>${f.message}</li>`).join('')
+    + '</ul>';
+}
+
+function syncObstruction() {
+  // ponytail: every level carries exactly one box, so this edits the first.
+  const o = level.obstructions[0];
+  el('obsh').value = o.y1 - o.y0;
+  el('obsw').value = o.x1 - o.x0;
+  el('obsshape').value = o.shape || 'box';
+  el('obshn').textContent = o.shape === 'pipe'
+    ? `${(o.y1 - o.y0).toFixed(2)}" to the top of it`
+    : `${(o.y1 - o.y0).toFixed(2)}" high`;
+  el('obswn').textContent = o.shape === 'pipe'
+    ? `${(o.x1 - o.x0).toFixed(2)}" across`
+    : `${(o.x1 - o.x0).toFixed(2)}" wide`;
+}
+
+function editObstruction(fn) {
+  fn(level.obstructions[0]);
+  syncObstruction();
+  drawWorld();
+  render();
+}
+
+el('obsshape').onchange = () => editObstruction((o) => {
+  o.shape = el('obsshape').value;
+  // The failure message names it, so it has to say what you are looking at.
+  o.label = o.shape === 'pipe' ? 'pipe' : 'obstruction';
+});
+el('obsh').oninput = () => editObstruction((o) => {
+  o.y1 = o.y0 + parseFloat(el('obsh').value);
+});
+el('obsw').oninput = () => editObstruction((o) => {
+  const mid = (o.x0 + o.x1) / 2;
+  const w = parseFloat(el('obsw').value);
+  o.x0 = mid - w / 2;
+  o.x1 = mid + w / 2;
+});
+
+el('size').innerHTML = PLAYABLE_SIZES
+  .map((s) => `<option value="${s}">${s}" — ${frac(radiusOf(s))} radius</option>`)
+  .join('');
+el('size').value = size;
+el('size').onchange = () => {
+  size = el('size').value;
+  drawWorld();
+  render();
+};
+
+el('level').innerHTML = [...LEVELS, CUSTOM]
+  .map((l) => `<option value="${l.id}">${l.title}</option>`).join('');
+el('level').onchange = () => loadLevel(el('level').value);
+el('add').onclick = () => {
+  const last = bends.length ? bends[bends.length - 1].at : 0;
+  bends.push({ at: Math.round(last + 10), angle: 30 });
+  render();
+  // The new row lands above the button, and with a head drawn beside every
+  // bend the list is taller than a phone. Without this the row appears
+  // off-screen, the view does not move, and the button reads as dead.
+  const rows = el('bends').querySelectorAll('.row');
+  const added = rows[rows.length - 1];
+  if (added) added.scrollIntoView({ block: 'center', behavior: 'smooth' });
+};
+el('addjoint').onclick = () => {
+  // One tap does the whole run: a joint every stick at most, each as late as
+  // the straight pipe allows, so every piece runs as long as it can.
+  const found = suggestCouplings(bends, cut, size);
+  if (found === null) {
+    el('markerr').textContent = 'No legal joint on this run — every spot long '
+      + 'enough is on a bend. Move a mark, or cut it shorter.';
+    return;
+  }
+  el('markerr').textContent = '';
+  couplings = found;
+  render();
+};
+el('cut').oninput = render;
+el('test').onclick = () => report(render());
+el('show').onclick = () => {
+  // The shipped answer was worked out on 3/4", and a different radius wants
+  // different marks. So re-solve for the pipe actually selected rather than
+  // laying in an answer that no longer fits — same search the build gate runs.
+  const found = solveFit(level, level.solution, size);
+  if (!found.pass) {
+    el('result').className = 'fail';
+    el('result').innerHTML = '<b>No answer found.</b>Not at this size, not '
+      + 'from these marks. Try the other pipe, or move the marks yourself.';
+    return;
+  }
+  bends = found.bends.map((b) => ({ ...b }));
+  cut = found.cut;
+  el('cut').value = cut;
+  report(render());
+};
+
+resize();
+loadLevel(LEVELS[0].id);
+if (has3D) {
+  (function loop() {
+    requestAnimationFrame(loop);
+    controls.update();
+    renderer.render(scene, camera);
+  }());
+}
+</script>
